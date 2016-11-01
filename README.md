@@ -22,7 +22,7 @@ class ModelK(Model)
     model_<Z> = ForeignKey(Model<Z>)
 ```
 
-So for each model you need to write decorator to detect has user permissions to him.
+So for each model, you need to write one decorator to detect has user permissions this object.
 
 ```python
 def has_user_permissions_to_model_x(function)
@@ -35,7 +35,7 @@ def has_user_permissions_to_model_x(function)
     return inner
 ```
 
-Additionally for each method you need to attach correct decorators.
+Additionally for each method, you need to attach correct decorators.
 
 ```python
 @has_user_permissions_to_model_x
@@ -61,10 +61,16 @@ def process_request_n(model_<x>_id, model_<y>_id, ... model_<z>_id):
 
 And what there are K owners? Than you must do this job k-times.
 
-Forget about it!!!
+# Forget about it!!!
+
+```bash
+git clone https://github.com/pd346901/SmartSecurity.git 
+pip install ./SmartSecurity/dist/Smart\ Security-1.0.tar.gz
+```
 
 ```python
 # Extend the base SmartSecurity class:
+from smart_security.smart_security import SmartSecurity
 
 class MySecurity(SmartSecurity):
     # Define a owner class
@@ -80,7 +86,11 @@ class MySecurity(SmartSecurity):
     # You can also redefine many others methods to customize your decorator.
 ```
 
-and now you don't have to remember how access owner's id for each model instance.
+After that you don't have to remember:
+- how access owner's id for each model instance.
+- how retrieve user id from request.
+- which decorators use to check permissions for **ALL parameters of ALL methods**.
+
 Now you need only append one line to each method:
 
 ```python
@@ -91,6 +101,6 @@ You don't have to care about arguments and models.
 
 What when you change database structure?
 
-Without this library you need to edit ALL decorators.
+Without this library **you need to edit ALL decorators**.
 
-With this library you don't have to do anything.
+With this library **you don't have to do anything**.

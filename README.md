@@ -1,4 +1,4 @@
-# Bored of writing many similar decorators?
+# Bored with writing many similar decorators?
 Consider the following example:
 
 ```python

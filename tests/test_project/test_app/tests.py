@@ -1,8 +1,19 @@
-from unittest import TestCase
+from django.test import TestCase
 
-from django.db.models import Model, ForeignKey, IntegerField, OneToOneField, ManyToManyField
-
-from smart_security import replace_with_defaults, ModelOwnerPathFinder, SmartSecurity
+from smart_security.smart_security import (
+    replace_with_defaults,
+    ModelOwnerPathFinder,
+    SmartSecurity,
+)
+from test_app.models import (
+    _TestStartModel,
+    _TestOwner,
+    _TestAnotherStartModel,
+    _TestBroker,
+    _TestOtherBroker,
+    _TestOneToOneStartModel,
+    _TestManyToManyStartModel,
+)
 
 
 class _SampleClassForTestDecorator(object):
@@ -22,39 +33,6 @@ class _SampleClassForTestDecorator(object):
     @replace_with_defaults
     def third(self, p=42):
         return p
-
-
-class TestModelMixin(object):
-    class Meta:
-        app_label = 'Test application'
-
-
-class _TestOwner(Model, TestModelMixin):
-    name = IntegerField()
-
-
-class _TestOtherBroker(Model, TestModelMixin):
-    another = ForeignKey(_TestOwner)
-
-
-class _TestBroker(Model, TestModelMixin):
-    owner = ForeignKey(_TestOwner)
-
-
-class _TestStartModel(Model, TestModelMixin):
-    broker = ForeignKey(_TestBroker)
-
-
-class _TestAnotherStartModel(Model, TestModelMixin):
-    test = ForeignKey(_TestStartModel)
-
-
-class _TestOneToOneStartModel(Model, TestModelMixin):
-    one = OneToOneField(_TestStartModel)
-
-
-class _TestManyToManyStartModel(Model, TestModelMixin):
-    many = ManyToManyField(_TestOneToOneStartModel)
 
 
 class InspectorTests(TestCase):

@@ -3,13 +3,13 @@ import functools
 from django.contrib.auth.models import User
 from django.core.exceptions import PermissionDenied
 from django.db.models import ManyToManyField
+from inspect import getfullargspec
 
 
 def _get_function_spec(function):
-    from inspect import getargspec
-    arguments, _, _, defaults = getargspec(function)
-    if defaults is None:
-        defaults = ()
+    argspec = getfullargspec(function)
+    arguments = argspec.args
+    defaults = argspec.defaults or ()
     return arguments, defaults
 
 
@@ -175,7 +175,7 @@ class SmartSecurity(object):
         key_value_arguments_names = argument_names[(number_of_arguments - len(defaults)):]
         key_value_arguments_with_defaults = dict(zip(key_value_arguments_names, defaults))
         key_value_arguments_with_defaults.update(key_value_arguments_to_merge)
-        result = zip(argument_names, positional_arguments_to_merge)
+        result = list(zip(argument_names, positional_arguments_to_merge))
         number_of_positional_arguments = len(result)
         for argument_name in argument_names[number_of_positional_arguments:]:
             result.append((argument_name, key_value_arguments_with_defaults[argument_name]))
@@ -249,10 +249,9 @@ class ModelOwnerPathFinder(object):
                 return process_ancestors()
             fields_and_many_to_many_relations = current_class._meta.fields + current_class._meta.many_to_many
             for field in fields_and_many_to_many_relations:
-                is_field_instance = partial(isinstance, field)
-                if filter(is_field_instance, [ForeignKey, OneToOneField, ManyToManyField]) and \
-                        not field.null and field.related.parent_model not in ancestors:
-                    next_class = field.related.parent_model
+                if isinstance(field, (ForeignKey, OneToOneField, ManyToManyField)) and \
+                        not field.null and field.related_model not in ancestors:
+                    next_class = field.related_model
                     ancestors[next_class] = (current_class, field)
                     queue_of_models.append(next_class)
 

@@ -10,5 +10,4 @@ setup(
       author='Piotr Domanski',
       author_email='piotrjerzydomanski@gmail.com',
       packages=['smart_security'],
-      install_requires=["django-guardian>=2.0.0"]
 )

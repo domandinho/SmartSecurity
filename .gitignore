@@ -3,4 +3,4 @@ dist/
 db.sqlite3
 __pycache__
 lib/
-build/
+build

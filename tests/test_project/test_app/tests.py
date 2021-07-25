@@ -1,10 +1,9 @@
 from django.test import TestCase
 
 from smart_security.smart_security import (
-    replace_with_defaults,
-    ModelOwnerPathFinder,
     SmartSecurity,
 )
+from smart_security.utils import replace_with_defaults, ModelOwnerPathFinder
 from test_app.models import (
     _TestStartModel,
     _TestOwner,
@@ -55,44 +54,100 @@ class InspectorTests(TestCase):
 
     def test_simple_inspection(self):
         x = ModelOwnerPathFinder(_TestStartModel, _TestOwner)
-        self.assertEquals(x.find_shortest_path_to_owner_model(), 'broker__owner')
-        self.assertEquals(x.find_shortest_path_to_owner_model(model_to_search_class=_TestAnotherStartModel),
-                          'test__broker__owner')
-        self.assertEquals(x.find_shortest_path_to_owner_model(security_model_class=_TestBroker),
-                          'broker')
-        self.assertEquals(x.find_shortest_path_to_owner_model(model_to_search_class=_TestOtherBroker),
-                          'another')
-        self.assertEquals(x.find_shortest_path_to_owner_model(model_to_search_class=_TestOneToOneStartModel),
-                          'one__broker__owner')
-        self.assertEquals(x.find_shortest_path_to_owner_model(model_to_search_class=_TestManyToManyStartModel),
-                          'many__one__broker__owner')
-        self.assertIsNone(x.find_shortest_path_to_owner_model(security_model_class=_TestAnotherStartModel))
-        self.assertIsNone(x.find_shortest_path_to_owner_model(security_model_class=_TestOtherBroker))
+        self.assertEquals(x.find_shortest_path_to_owner_model(), "broker__owner")
+        self.assertEquals(
+            x.find_shortest_path_to_owner_model(
+                model_to_search_class=_TestAnotherStartModel
+            ),
+            "test__broker__owner",
+        )
+        self.assertEquals(
+            x.find_shortest_path_to_owner_model(security_model_class=_TestBroker),
+            "broker",
+        )
+        self.assertEquals(
+            x.find_shortest_path_to_owner_model(model_to_search_class=_TestOtherBroker),
+            "another",
+        )
+        self.assertEquals(
+            x.find_shortest_path_to_owner_model(
+                model_to_search_class=_TestOneToOneStartModel
+            ),
+            "one__broker__owner",
+        )
+        self.assertEquals(
+            x.find_shortest_path_to_owner_model(
+                model_to_search_class=_TestManyToManyStartModel
+            ),
+            "many__one__broker__owner",
+        )
+        self.assertIsNone(
+            x.find_shortest_path_to_owner_model(
+                security_model_class=_TestAnotherStartModel
+            )
+        )
+        self.assertIsNone(
+            x.find_shortest_path_to_owner_model(security_model_class=_TestOtherBroker)
+        )
 
 
 class DecoratorTest(TestCase):
     def test_converting_names(self):
-        self.assertEquals("SampleModel", SmartSecurity._convert_variable_to_class_name("sample_model_id"))
-        self.assertEquals("LongSampleModel", SmartSecurity._convert_variable_to_class_name("long_sample_model_id"))
-        self.assertEquals("Sample", SmartSecurity._convert_variable_to_class_name("sample_id"))
+        self.assertEquals(
+            "SampleModel",
+            SmartSecurity._convert_variable_to_class_name("sample_model_id"),
+        )
+        self.assertEquals(
+            "LongSampleModel",
+            SmartSecurity._convert_variable_to_class_name("long_sample_model_id"),
+        )
+        self.assertEquals(
+            "Sample", SmartSecurity._convert_variable_to_class_name("sample_id")
+        )
 
-    _typical_answer = [('b', 1), ('a', 6)]
+    _typical_answer = [("b", 1), ("a", 6)]
 
     def test_merging_arguments(self):
-        self.assertEquals(self._typical_answer, SmartSecurity._merge_args_and_kwargs(lambda b, a=9: a, [1], {'a': 6}))
-        self.assertEquals([('b', 8), ('a', 6)],
-                          SmartSecurity._merge_args_and_kwargs(lambda b=8, a=9: a, [], {'a': 6, 'b': 8}))
+        self.assertEquals(
+            self._typical_answer,
+            SmartSecurity._merge_args_and_kwargs(lambda b, a=9: a, [1], {"a": 6}),
+        )
+        self.assertEquals(
+            [("b", 8), ("a", 6)],
+            SmartSecurity._merge_args_and_kwargs(
+                lambda b=8, a=9: a, [], {"a": 6, "b": 8}
+            ),
+        )
         self.assertEquals([], SmartSecurity._merge_args_and_kwargs(lambda: 1, [], {}))
-        self.assertEquals([('b', 1), ('a', 2)], SmartSecurity._merge_args_and_kwargs(lambda b, a: b, [1, 2], []))
-        self.assertEquals([('c', 3), ('b', 1), ('d', 2), ('a', 0)], SmartSecurity._merge_args_and_kwargs(
-                lambda c, b, d=5, a=5: c, [3, 1], {'a': 0, 'd': 2}))
+        self.assertEquals(
+            [("b", 1), ("a", 2)],
+            SmartSecurity._merge_args_and_kwargs(lambda b, a: b, [1, 2], []),
+        )
+        self.assertEquals(
+            [("c", 3), ("b", 1), ("d", 2), ("a", 0)],
+            SmartSecurity._merge_args_and_kwargs(
+                lambda c, b, d=5, a=5: c, [3, 1], {"a": 0, "d": 2}
+            ),
+        )
 
     def test_strange_args_as_kwargs(self):
-        self.assertEquals(self._typical_answer, SmartSecurity._merge_args_and_kwargs(lambda b, a=9: a, [1, 6], {}))
-        self.assertEquals(self._typical_answer, SmartSecurity._merge_args_and_kwargs(lambda b=4, a=9: a, [1, 6], {}))
+        self.assertEquals(
+            self._typical_answer,
+            SmartSecurity._merge_args_and_kwargs(lambda b, a=9: a, [1, 6], {}),
+        )
+        self.assertEquals(
+            self._typical_answer,
+            SmartSecurity._merge_args_and_kwargs(lambda b=4, a=9: a, [1, 6], {}),
+        )
 
     def test_strange_kwargs_as_args(self):
-        self.assertEquals(self._typical_answer,
-                          SmartSecurity._merge_args_and_kwargs(lambda b, a: a, [], {'a': 6, 'b': 1}))
-        self.assertEquals(self._typical_answer,
-                          SmartSecurity._merge_args_and_kwargs(lambda b, a=3: a, [], {'a': 6, 'b': 1}))
+        self.assertEquals(
+            self._typical_answer,
+            SmartSecurity._merge_args_and_kwargs(lambda b, a: a, [], {"a": 6, "b": 1}),
+        )
+        self.assertEquals(
+            self._typical_answer,
+            SmartSecurity._merge_args_and_kwargs(
+                lambda b, a=3: a, [], {"a": 6, "b": 1}
+            ),
+        )

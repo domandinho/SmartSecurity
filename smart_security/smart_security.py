@@ -5,6 +5,8 @@ from django.core.exceptions import PermissionDenied
 from django.apps import apps
 from logging import getLogger
 
+from guardian.backends import ObjectPermissionBackend
+
 from smart_security.constants import (
     META_ATTRIBUTE,
     IGNORE_SMART_SECURITY_OPTION,
@@ -188,3 +190,10 @@ class SmartSecurity:
             zip(key_value_arguments_names, defaults)
         )
         return key_value_arguments_with_defaults
+
+
+class SmartSecurityObjectPermissionBackend(ObjectPermissionBackend):
+    def has_perm(self, user_obj, perm, obj=None):
+        if obj is not None:
+            raise NotImplementedError
+        return super().has_perm(user_obj, perm, obj=obj)

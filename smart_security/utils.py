@@ -1,17 +1,8 @@
 import functools
+from collections import deque
 from inspect import getfullargspec
 
-from django.db.models import ManyToManyField
-from collections import deque
-from django.db.models.fields.related import ForeignKey, OneToOneField
-
-
-def is_integer(integer_candidate):
-    try:
-        int(integer_candidate)
-        return True
-    except (ValueError, TypeError):
-        return False
+from django.db.models.fields.related import ForeignKey
 
 
 def replace_with_defaults(function):
@@ -58,14 +49,8 @@ class ModelOwnerPathFinder:
     Models are vertexes and relationships are edges.
     """
 
-    def __init__(self, default_model_to_search_class, default_security_model_class):
-        super(ModelOwnerPathFinder, self).__init__()
-        self.default_model_to_search_class = default_model_to_search_class
-        self.default_security_model_class = default_security_model_class
-
-    @replace_with_defaults
     def find_shortest_path_to_owner_model(
-        self, model_to_search_class=None, security_model_class=None
+        self, model_to_search_class, security_model_class
     ):
         """
         A method to investigate the shortest path to owner's class
@@ -79,33 +64,6 @@ class ModelOwnerPathFinder:
             security_model_class=security_model_class,
         )
         return bfs_search.search()
-
-    @replace_with_defaults
-    def detect_has_user_object_access(
-        self,
-        model_id,
-        owner_id,
-        model_to_search_class=None,
-        security_model_class=None,
-    ):
-        """
-        A method to check has user access to model_id.
-        @param model_id: id of model instance
-        @param owner_id: id of owner instance
-        @param model_to_search_class:
-        @param security_model_class:
-        @return: True if element belongs to owner or false otherwise
-        """
-        shortest_path_to_owner = self.find_shortest_path_to_owner_model(
-            model_to_search_class=model_to_search_class,
-            security_model_class=security_model_class,
-        )
-        return (
-            shortest_path_to_owner is None
-            or model_to_search_class.objects.filter(
-                **{"pk": model_id, shortest_path_to_owner: owner_id}
-            ).exists()
-        )
 
 
 class BFSModelSearch:
@@ -130,11 +88,7 @@ class BFSModelSearch:
         meta_data = current_class._meta
         fields_and_many_to_many_relations = meta_data.fields + meta_data.many_to_many
         for field in fields_and_many_to_many_relations:
-            relation_fields = (
-                ForeignKey,
-                OneToOneField,
-                ManyToManyField,
-            )
+            relation_fields = (ForeignKey,)
             if (
                 isinstance(field, relation_fields)
                 and not field.null
@@ -149,7 +103,7 @@ class BFSModelSearch:
         # owner's class from model manager of model_to_search_class
         result = ""
         current_element = self._security_model_class
-        field_delimiter = "__"
+        field_delimiter = "."
         while current_element != self._model_to_search_class:
             current_element, foreign_key_field = ancestors[current_element]
             result = foreign_key_field.name + field_delimiter + result

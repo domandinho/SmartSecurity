@@ -1,20 +1,17 @@
-import functools
-
-from django.contrib.auth.models import User
-from django.core.exceptions import PermissionDenied
-from django.apps import apps
 from logging import getLogger
 
+from django.apps import apps
+from django.conf import settings
+from django.contrib.auth.models import User
+from django.core.exceptions import PermissionDenied
 from guardian.backends import ObjectPermissionBackend
 
 from smart_security.constants import (
     META_ATTRIBUTE,
     IGNORE_SMART_SECURITY_OPTION,
-    SHOULD_BE_CHECKED_ATTRIBUTE_SUFFIX,
-    ID_SUFFIX_REGEX,
+    SMART_SECURITY_MODEL_CLASS_SETTING,
 )
-from smart_security.utils import get_function_spec, ModelOwnerPathFinder, is_integer
-import re
+from smart_security.utils import ModelOwnerPathFinder
 
 logger = getLogger("smart_security")
 
@@ -41,40 +38,6 @@ class SmartSecurity:
         """
         model_class._meta.ignore_smart_security = True
         return model_class
-
-    @classmethod
-    def check_permissions(cls, function):
-        """
-        A decorator which retrieves arguments from method.
-        For each argument with a name matching to pattern <model_name>_id
-        he finds a way to owner's class
-        and compares owner's id with an id from request.
-        @param function: function to decorate
-        @return: decorated function
-        """
-
-        @functools.wraps(function)
-        def inner(request, *args, **kwargs):
-            owner_id = cls.get_owner_id_from_request(request)
-            merged_arguments = cls._merge_args_and_kwargs(
-                function, (request,) + args, kwargs
-            )
-            finder = ModelOwnerPathFinder(None, cls.get_owner_class())
-            for key, value in merged_arguments:
-                model_class = cls.get_model_for_argument(key)
-                if model_class is None or not is_integer(value):
-                    continue
-                    # If name of an argument doesn't match to any existing
-                    # model than checking is continued.
-                has_user_access = finder.detect_has_user_object_access(
-                    int(value), owner_id, model_to_search_class=model_class
-                )
-                if not has_user_access:
-                    cls.if_user_has_no_permissions(request, key, value)
-
-            return function(request, *args, **kwargs)
-
-        return inner
 
     @classmethod
     def if_user_has_no_permissions(cls, request, key, value):
@@ -122,78 +85,46 @@ class SmartSecurity:
         all_models = apps.get_models()
         return [model for model in all_models if cls._should_model_be_checked(model)]
 
-    @classmethod
-    def get_model_for_argument(cls, key):
-        """
-        An argument to model matcher.
-        @param key: name of an argument
-        @return: a model class if it exists of None otherwise
-        """
-        if not key.endswith(SHOULD_BE_CHECKED_ATTRIBUTE_SUFFIX):
-            return None
-        model_classes = cls._get_model_classes(key)
-        if not model_classes:
-            return None
-        elif len(model_classes) > 1:
-            module = model_classes[0].__module__
-            logger.warning(
-                f"Many models with the same name: {key}. "
-                f"First matching model from module {module} was chosen."
-            )
-        return model_classes[0]
-
-    @classmethod
-    def _get_model_classes(cls, key):
-        all_models = cls.get_all_models_candidates()
-        key_as_model_name = cls._convert_variable_to_class_name(key)
-        model_classes = [
-            model for model in all_models if model.__name__ == key_as_model_name
-        ]
-        return model_classes
-
-    @classmethod
-    def _convert_variable_to_class_name(cls, variable_name):
-        # This method converts argument names
-        # (like "some_model_id" to class names (like "SomeModel")
-        variable_name = re.sub(ID_SUFFIX_REGEX, "", variable_name)
-        result = ""
-        for element in variable_name.split("_"):
-            if len(element) >= 1:
-                result += element[0].upper() + element[1:]
-        return result
-
-    @classmethod
-    def _merge_args_and_kwargs(
-        cls, function, positional_arguments_to_merge, key_value_arguments_to_merge
-    ):
-        # This method creates a list of all arguments of a function with their values
-        argument_names, defaults = get_function_spec(function)
-        key_value_arguments_with_defaults = cls._get_key_value_arguments_with_defaults(
-            argument_names=argument_names,
-            defaults=defaults,
-        )
-        key_value_arguments_with_defaults.update(key_value_arguments_to_merge)
-        result = list(zip(argument_names, positional_arguments_to_merge))
-        number_of_positional_arguments = len(result)
-        for argument_name in argument_names[number_of_positional_arguments:]:
-            result.append(
-                (argument_name, key_value_arguments_with_defaults[argument_name])
-            )
-        return result
-
-    @classmethod
-    def _get_key_value_arguments_with_defaults(cls, argument_names, defaults):
-        number_of_arguments = len(argument_names)
-        arguments_offset = number_of_arguments - len(defaults)
-        key_value_arguments_names = argument_names[arguments_offset:]
-        key_value_arguments_with_defaults = dict(
-            zip(key_value_arguments_names, defaults)
-        )
-        return key_value_arguments_with_defaults
-
 
 class SmartSecurityObjectPermissionBackend(ObjectPermissionBackend):
     def has_perm(self, user_obj, perm, obj=None):
         if obj is not None:
-            raise NotImplementedError
+            security_model_class = self._get_security_model_class()
+            model_class = obj.__class__
+            if security_model_class != model_class:
+                shortest = self._find_shortest_accessor(
+                    model_class, security_model_class
+                )
+                for accessor in shortest:
+                    obj = getattr(obj, accessor)
+                perm = perm.replace(
+                    self._get_permission_name_from_model_name(model_class),
+                    self._get_permission_name_from_model_name(security_model_class),
+                )
         return super().has_perm(user_obj, perm, obj=obj)
+
+    @classmethod
+    def _find_shortest_accessor(cls, model_class, security_model_class):
+        finder = ModelOwnerPathFinder()
+        shortest = finder.find_shortest_path_to_owner_model(
+            model_to_search_class=model_class,
+            security_model_class=security_model_class,
+        )
+        shortest = shortest.split(".")
+        return shortest
+
+    @classmethod
+    def _get_permission_name_from_model_name(cls, model_class):
+        return model_class.__name__.lower()
+
+    @classmethod
+    def _get_security_model_class(cls):
+        app_label, model_name = getattr(
+            settings,
+            SMART_SECURITY_MODEL_CLASS_SETTING,
+            None,  # TODO: raise exception if absent
+        ).rsplit(".", maxsplit=1)
+        security_model_class = apps.get_model(
+            app_label=app_label, model_name=model_name
+        )
+        return security_model_class

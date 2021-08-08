@@ -1,153 +1,117 @@
+from django.contrib.auth.models import User
 from django.test import TestCase
+from guardian.models import UserObjectPermission
 
 from smart_security.smart_security import (
-    SmartSecurity,
+    SmartSecurityObjectPermissionBackend,
 )
-from smart_security.utils import replace_with_defaults, ModelOwnerPathFinder
+from smart_security.utils import ModelOwnerPathFinder
 from test_app.models import (
-    _TestStartModel,
-    _TestOwner,
-    _TestAnotherStartModel,
-    _TestBroker,
-    _TestOtherBroker,
-    _TestOneToOneStartModel,
-    _TestManyToManyStartModel,
+    TestStartModel,
+    TestOwner,
+    TestAnotherStartModel,
+    TestBroker,
+    TestOtherBroker,
 )
-
-
-class _SampleClassForTestDecorator(object):
-    def __init__(self, **kwargs):
-        super(_SampleClassForTestDecorator, self).__init__()
-        for key, value in kwargs.items():
-            setattr(self, "default_" + key, value)
-
-    @replace_with_defaults
-    def first(self, key=42):
-        return key
-
-    @replace_with_defaults
-    def second(self, key=42, value=42):
-        return key, value
-
-    @replace_with_defaults
-    def third(self, p=42):
-        return p
 
 
 class InspectorTests(TestCase):
-    def test_simple_method(self):
-        x = _SampleClassForTestDecorator(key=13, value=34)
-        self.assertEquals(x.first(), 13)
-        self.assertEquals(x.first(key=111), 111)
-        self.assertEquals(x.second(value=88), (13, 88))
-        self.assertEquals(x.second(key=22, value=88), (22, 88))
-        self.assertEquals(x.second(key=161), (161, 34))
-        self.assertEquals(x.second(), (13, 34))
-        self.assertEquals(x.third(p=3), 3)
-        self.assertEquals(x.third(), 42)
-
-    def test_defaults_with_passing_kwargs_using_position(self):
-        x = _SampleClassForTestDecorator(key=13, value=34)
-        self.assertEquals(x.second(22, 33), (22, 33))
-        self.assertEquals(x.first(555), 555)
-        self.assertEquals(x.third(555), 555)
-
     def test_simple_inspection(self):
-        x = ModelOwnerPathFinder(_TestStartModel, _TestOwner)
-        self.assertEquals(x.find_shortest_path_to_owner_model(), "broker__owner")
+        x = ModelOwnerPathFinder()
         self.assertEquals(
-            x.find_shortest_path_to_owner_model(
-                model_to_search_class=_TestAnotherStartModel
-            ),
-            "test__broker__owner",
+            x.find_shortest_path_to_owner_model(TestStartModel, TestOwner),
+            "broker.owner",
         )
         self.assertEquals(
-            x.find_shortest_path_to_owner_model(security_model_class=_TestBroker),
+            x.find_shortest_path_to_owner_model(
+                model_to_search_class=TestAnotherStartModel,
+                security_model_class=TestOwner,
+            ),
+            "test.broker.owner",
+        )
+        self.assertEquals(
+            x.find_shortest_path_to_owner_model(
+                model_to_search_class=TestStartModel, security_model_class=TestBroker
+            ),
             "broker",
         )
         self.assertEquals(
-            x.find_shortest_path_to_owner_model(model_to_search_class=_TestOtherBroker),
-            "another",
-        )
-        self.assertEquals(
             x.find_shortest_path_to_owner_model(
-                model_to_search_class=_TestOneToOneStartModel
+                model_to_search_class=TestBroker, security_model_class=TestOwner
             ),
-            "one__broker__owner",
-        )
-        self.assertEquals(
-            x.find_shortest_path_to_owner_model(
-                model_to_search_class=_TestManyToManyStartModel
-            ),
-            "many__one__broker__owner",
+            "owner",
         )
         self.assertIsNone(
             x.find_shortest_path_to_owner_model(
-                security_model_class=_TestAnotherStartModel
+                model_to_search_class=TestStartModel,
+                security_model_class=TestAnotherStartModel,
             )
         )
         self.assertIsNone(
-            x.find_shortest_path_to_owner_model(security_model_class=_TestOtherBroker)
+            x.find_shortest_path_to_owner_model(
+                model_to_search_class=TestStartModel,
+                security_model_class=TestOtherBroker,
+            )
         )
 
 
-class DecoratorTest(TestCase):
-    def test_converting_names(self):
-        self.assertEquals(
-            "SampleModel",
-            SmartSecurity._convert_variable_to_class_name("sample_model_id"),
-        )
-        self.assertEquals(
-            "LongSampleModel",
-            SmartSecurity._convert_variable_to_class_name("long_sample_model_id"),
-        )
-        self.assertEquals(
-            "Sample", SmartSecurity._convert_variable_to_class_name("sample_id")
+class ObjectPermissionBackendTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create(username="jack")
+        self.backend = SmartSecurityObjectPermissionBackend()
+        self.owner = TestOwner.objects.create(name="owner")
+        self.broker = TestBroker.objects.create(owner=self.owner)
+        self.other_broker_model = TestOtherBroker.objects.create(another=self.owner)
+        self.other_owner = TestOwner.objects.create(name="other")
+        self.other_broker = TestOtherBroker.objects.create(another=self.other_owner)
+        self.start_model = TestStartModel.objects.create(broker=self.broker)
+        self.another_start_model = TestAnotherStartModel.objects.create(
+            test=self.start_model
         )
 
-    _typical_answer = [("b", 1), ("a", 6)]
+    def _assert_permission_state(self, expected: bool, permission: str, instance):
+        assert expected == self.backend.has_perm(self.user, permission, instance)
 
-    def test_merging_arguments(self):
-        self.assertEquals(
-            self._typical_answer,
-            SmartSecurity._merge_args_and_kwargs(lambda b, a=9: a, [1], {"a": 6}),
+    def _assert_has_perm(self, permission: str, instance):
+        self._assert_permission_state(
+            expected=True, permission=permission, instance=instance
         )
-        self.assertEquals(
-            [("b", 8), ("a", 6)],
-            SmartSecurity._merge_args_and_kwargs(
-                lambda b=8, a=9: a, [], {"a": 6, "b": 8}
+
+    def _assert_has_no_perm(self, permission: str, instance):
+        self._assert_permission_state(
+            expected=False, permission=permission, instance=instance
+        )
+
+    def test_authenticate(self):
+        self.assertEqual(
+            self.backend.authenticate(
+                request={}, username=self.user.username, password=self.user.password
             ),
-        )
-        self.assertEquals([], SmartSecurity._merge_args_and_kwargs(lambda: 1, [], {}))
-        self.assertEquals(
-            [("b", 1), ("a", 2)],
-            SmartSecurity._merge_args_and_kwargs(lambda b, a: b, [1, 2], []),
-        )
-        self.assertEquals(
-            [("c", 3), ("b", 1), ("d", 2), ("a", 0)],
-            SmartSecurity._merge_args_and_kwargs(
-                lambda c, b, d=5, a=5: c, [3, 1], {"a": 0, "d": 2}
-            ),
+            None,
         )
 
-    def test_strange_args_as_kwargs(self):
-        self.assertEquals(
-            self._typical_answer,
-            SmartSecurity._merge_args_and_kwargs(lambda b, a=9: a, [1, 6], {}),
+    def test_has_perm(self):
+        self._assert_has_no_perm("view_testowner", self.owner)
+        UserObjectPermission.objects.assign_perm(
+            "view_testowner", self.user, self.owner
         )
-        self.assertEquals(
-            self._typical_answer,
-            SmartSecurity._merge_args_and_kwargs(lambda b=4, a=9: a, [1, 6], {}),
-        )
+        self.assertTrue(self.backend.has_perm(self.user, "view_testowner", self.owner))
 
-    def test_strange_kwargs_as_args(self):
-        self.assertEquals(
-            self._typical_answer,
-            SmartSecurity._merge_args_and_kwargs(lambda b, a: a, [], {"a": 6, "b": 1}),
+    def test_has_perm_transitive(self):
+        self._assert_has_no_perm("view_testbroker", self.broker)
+        UserObjectPermission.objects.assign_perm(
+            "view_testowner", self.user, self.owner
         )
-        self.assertEquals(
-            self._typical_answer,
-            SmartSecurity._merge_args_and_kwargs(
-                lambda b, a=3: a, [], {"a": 6, "b": 1}
-            ),
+        self._assert_has_perm("view_testbroker", self.broker)
+        self._assert_has_perm("view_testotherbroker", self.other_broker_model)
+        self._assert_has_no_perm("view_testotherbroker", self.other_broker)
+
+    def test_has_perm_long_path(self):
+        self._assert_has_no_perm("view_teststartmodel", self.start_model)
+        self._assert_has_no_perm("view_testanotherstartmodel", self.another_start_model)
+
+        UserObjectPermission.objects.assign_perm(
+            "view_testowner", self.user, self.owner
         )
+        self._assert_has_perm("view_teststartmodel", self.start_model)
+        self._assert_has_perm("view_testanotherstartmodel", self.another_start_model)

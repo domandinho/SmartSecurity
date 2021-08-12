@@ -1,7 +1,10 @@
 from logging import getLogger
+from typing import Optional, Union, Type, List
 
 from django.apps import apps
 from django.conf import settings
+from django.contrib.auth.models import User, Permission
+from django.db.models import Model
 from guardian.backends import ObjectPermissionBackend
 
 from smart_security.constants import (
@@ -13,7 +16,9 @@ logger = getLogger("smart_security")
 
 
 class SmartSecurityObjectPermissionBackend(ObjectPermissionBackend):
-    def has_perm(self, user_obj, perm, obj=None):
+    def has_perm(
+        self, user_obj: User, perm: Union[str, Permission], obj: Optional[Model] = None
+    ) -> bool:
         if obj is not None:
             security_model_class = self._get_security_model_class()
             model_class = obj.__class__
@@ -30,7 +35,9 @@ class SmartSecurityObjectPermissionBackend(ObjectPermissionBackend):
         return super().has_perm(user_obj, perm, obj=obj)
 
     @classmethod
-    def _find_shortest_accessor(cls, model_class, security_model_class):
+    def _find_shortest_accessor(
+        cls, model_class: Type[Model], security_model_class: Type[Model]
+    ) -> List[str]:
         finder = ModelOwnerPathFinder()
         shortest = finder.find_shortest_path_to_owner_model(
             model_to_search_class=model_class,
@@ -40,11 +47,11 @@ class SmartSecurityObjectPermissionBackend(ObjectPermissionBackend):
         return shortest
 
     @classmethod
-    def _get_permission_name_from_model_name(cls, model_class):
+    def _get_permission_name_from_model_name(cls, model_class: Type[Model]) -> str:
         return model_class.__name__.lower()
 
     @classmethod
-    def _get_security_model_class(cls):
+    def _get_security_model_class(cls) -> Type[Model]:
         app_label, model_name = getattr(
             settings,
             SMART_SECURITY_MODEL_CLASS_SETTING,

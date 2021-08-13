@@ -1,44 +1,6 @@
-import functools
 from collections import deque
-from inspect import getfullargspec
 
 from django.db.models.fields.related import ForeignKey
-
-
-def replace_with_defaults(function):
-    """
-    A decorator to inserting default values from an self object into a method.
-    @param function: function to decorate
-    @return: decorated function
-    """
-
-    @functools.wraps(function)
-    def inner(self, *args, **kwargs):
-        default_marker = "default_"
-        arguments, defaults = get_function_spec(function)
-        index_of_first_kwarg_not_passed_using_position = max(
-            len(args) + 1, len(arguments) - len(defaults)
-        )
-        for key_value_argument in arguments[
-            index_of_first_kwarg_not_passed_using_position:
-        ]:
-            # Adding to kwargs defaults from self
-            if key_value_argument not in kwargs and hasattr(
-                self, default_marker + key_value_argument
-            ):
-                kwargs[key_value_argument] = getattr(
-                    self, default_marker + key_value_argument
-                )
-        return function(self, *args, **kwargs)
-
-    return inner
-
-
-def get_function_spec(function):
-    argument_specification = getfullargspec(function)
-    arguments = argument_specification.args
-    defaults = argument_specification.defaults or ()
-    return arguments, defaults
 
 
 class ModelOwnerPathFinder:

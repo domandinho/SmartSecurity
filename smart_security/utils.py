@@ -1,5 +1,7 @@
 from collections import deque
+from typing import Type, Deque, Tuple, Dict
 
+from django.db.models import Model
 from django.db.models.fields.related import ForeignKey
 
 
@@ -12,8 +14,10 @@ class ModelOwnerPathFinder:
     """
 
     def find_shortest_path_to_owner_model(
-        self, model_to_search_class, security_model_class
-    ):
+        self,
+        model_to_search_class: Type[Model],
+        security_model_class: Type[Model],
+    ) -> str:
         """
         A method to investigate the shortest path to owner's class
         @param model_to_search_class: a model to investigate path
@@ -29,11 +33,15 @@ class ModelOwnerPathFinder:
 
 
 class BFSModelSearch:
-    def __init__(self, model_to_search_class, security_model_class):
+    _ANCESTORS_DICT = Dict[Type[Model], Tuple[Type[Model], ForeignKey]]
+
+    def __init__(
+        self, model_to_search_class: Type[Model], security_model_class: Type[Model]
+    ):
         self._model_to_search_class = model_to_search_class
         self._security_model_class = security_model_class
 
-    def search(self):
+    def search(self) -> str:
         ancestors = {}
 
         queue_of_models = deque()
@@ -46,7 +54,12 @@ class BFSModelSearch:
             self._process_current_class(ancestors, current_class, queue_of_models)
 
     @classmethod
-    def _process_current_class(cls, ancestors, current_class, queue_of_models):
+    def _process_current_class(
+        cls,
+        ancestors: _ANCESTORS_DICT,
+        current_class: Type[Model],
+        queue_of_models: Deque,
+    ):
         meta_data = current_class._meta
         fields_and_many_to_many_relations = meta_data.fields + meta_data.many_to_many
         for field in fields_and_many_to_many_relations:
@@ -60,7 +73,7 @@ class BFSModelSearch:
                 ancestors[next_class] = (current_class, field)
                 queue_of_models.append(next_class)
 
-    def _process_ancestors(self, ancestors):
+    def _process_ancestors(self, ancestors: _ANCESTORS_DICT) -> str:
         # This method creates argument name to access
         # owner's class from model manager of model_to_search_class
         result = ""

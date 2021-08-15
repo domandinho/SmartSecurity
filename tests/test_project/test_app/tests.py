@@ -1,9 +1,10 @@
 from django.contrib.auth.models import User
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from guardian.models import UserObjectPermission
 
 from smart_security.smart_security import (
     SmartSecurityObjectPermissionBackend,
+    SmartSecurityIncorrectConfigException,
 )
 from smart_security.utils import ModelOwnerPathFinder
 from test_app.models import (
@@ -115,3 +116,38 @@ class ObjectPermissionBackendTests(TestCase):
         )
         self._assert_has_perm("view_teststartmodel", self.start_model)
         self._assert_has_perm("view_testanotherstartmodel", self.another_start_model)
+
+    @override_settings(SMART_SECURITY_MODEL_CLASS=None)
+    def test_no_smart_security_object_class(self):
+        with self.assertRaisesRegex(
+            expected_exception=SmartSecurityIncorrectConfigException,
+            expected_regex="SMART_SECURITY_MODEL_CLASS setting must be different then None!",
+        ):
+            self._assert_has_no_perm("view_testbroker", self.broker)
+
+    @override_settings(SMART_SECURITY_MODEL_CLASS="nonexisting_app.TestOwner")
+    def test_incorrect_app_in_smart_security_object_class(self):
+        with self.assertRaisesRegex(
+            expected_exception=SmartSecurityIncorrectConfigException,
+            expected_regex="SMART_SECURITY_MODEL_CLASS setting is wrong: "
+            "No installed app with label 'nonexisting_app",
+        ):
+            self._assert_has_no_perm("view_testbroker", self.broker)
+
+    @override_settings(SMART_SECURITY_MODEL_CLASS="test_app.TestOwnerXYZ")
+    def test_incorrect_model_in_smart_security_object_class(self):
+        with self.assertRaisesRegex(
+            expected_exception=SmartSecurityIncorrectConfigException,
+            expected_regex="SMART_SECURITY_MODEL_CLASS setting is wrong: App 'test_app' "
+            "doesn't have a 'TestOwnerXYZ' model.",
+        ):
+            self._assert_has_no_perm("view_testbroker", self.broker)
+
+    @override_settings(SMART_SECURITY_MODEL_CLASS="incorrect_config")
+    def test_incorrect_smart_security_object_class(self):
+        with self.assertRaisesRegex(
+            expected_exception=SmartSecurityIncorrectConfigException,
+            expected_regex="SMART_SECURITY_MODEL_CLASS must be app_name.model_name, "
+            "current is 'incorrect_config'!",
+        ):
+            self._assert_has_no_perm("view_testbroker", self.broker)

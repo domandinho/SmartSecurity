@@ -15,6 +15,10 @@ from smart_security.utils import ModelOwnerPathFinder
 logger = getLogger("smart_security")
 
 
+class SmartSecurityIncorrectConfigException(Exception):
+    pass
+
+
 class SmartSecurityObjectPermissionBackend(ObjectPermissionBackend):
     def has_perm(
         self, user_obj: User, perm: Union[str, Permission], obj: Optional[Model] = None
@@ -52,12 +56,30 @@ class SmartSecurityObjectPermissionBackend(ObjectPermissionBackend):
 
     @classmethod
     def _get_security_model_class(cls) -> Type[Model]:
-        app_label, model_name = getattr(
+        smart_security_model_class_name = getattr(
             settings,
             SMART_SECURITY_MODEL_CLASS_SETTING,
-            None,  # TODO: raise exception if absent
-        ).rsplit(".", maxsplit=1)
-        security_model_class = apps.get_model(
-            app_label=app_label, model_name=model_name
+            None,
         )
+        if smart_security_model_class_name is None:
+            raise SmartSecurityIncorrectConfigException(
+                "SMART_SECURITY_MODEL_CLASS setting must be different then None!"
+            )
+        try:
+            app_label, model_name = smart_security_model_class_name.rsplit(
+                ".", maxsplit=1
+            )
+        except ValueError:
+            raise SmartSecurityIncorrectConfigException(
+                f"SMART_SECURITY_MODEL_CLASS must be app_name.model_name, "
+                f"current is '{smart_security_model_class_name}'!"
+            )
+        try:
+            security_model_class = apps.get_model(
+                app_label=app_label, model_name=model_name
+            )
+        except LookupError as e:
+            raise SmartSecurityIncorrectConfigException(
+                f"SMART_SECURITY_MODEL_CLASS setting is wrong: {e}"
+            )
         return security_model_class

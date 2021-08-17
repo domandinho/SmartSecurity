@@ -39,7 +39,6 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "guardian",
     "test_app",
-    "django_extensions",
 ]
 
 MIDDLEWARE = [

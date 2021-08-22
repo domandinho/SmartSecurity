@@ -166,11 +166,9 @@ class SmartSecurity:
     ):
         # This method creates a list of all arguments of a function with their values
         argument_names, defaults = get_function_spec(function)
-        number_of_arguments = len(argument_names)
-        arguments_offset = number_of_arguments - len(defaults)
-        key_value_arguments_names = argument_names[arguments_offset:]
-        key_value_arguments_with_defaults = dict(
-            zip(key_value_arguments_names, defaults)
+        key_value_arguments_with_defaults = cls._get_key_value_arguments_with_defaults(
+            argument_names=argument_names,
+            defaults=defaults,
         )
         key_value_arguments_with_defaults.update(key_value_arguments_to_merge)
         result = list(zip(argument_names, positional_arguments_to_merge))
@@ -180,3 +178,13 @@ class SmartSecurity:
                 (argument_name, key_value_arguments_with_defaults[argument_name])
             )
         return result
+
+    @classmethod
+    def _get_key_value_arguments_with_defaults(cls, argument_names, defaults):
+        number_of_arguments = len(argument_names)
+        arguments_offset = number_of_arguments - len(defaults)
+        key_value_arguments_names = argument_names[arguments_offset:]
+        key_value_arguments_with_defaults = dict(
+            zip(key_value_arguments_names, defaults)
+        )
+        return key_value_arguments_with_defaults

@@ -129,4 +129,5 @@ SMART_SECURITY_MODEL_CLASS = "test_app.TestOwner"
 AUTHENTICATION_BACKENDS = (
     "django.contrib.auth.backends.ModelBackend",
     "guardian.backends.ObjectPermissionBackend",
+    "smart_security.smart_security.SmartSecurityObjectPermissionBackend",
 )

@@ -156,7 +156,6 @@ class ObjectPermissionBackendTests(TestCase):
 class UserTests(TestCase):
     def setUp(self):
         self.user = User.objects.create(username="jack")
-        self.backend = SmartSecurityObjectPermissionBackend()
         self.owner = TestOwner.objects.create(name="owner")
         self.broker = TestBroker.objects.create(owner=self.owner)
 

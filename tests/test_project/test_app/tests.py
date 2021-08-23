@@ -151,3 +151,18 @@ class ObjectPermissionBackendTests(TestCase):
             "current is 'incorrect_config'!",
         ):
             self._assert_has_no_perm("view_testbroker", self.broker)
+
+
+class UserTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create(username="jack")
+        self.backend = SmartSecurityObjectPermissionBackend()
+        self.owner = TestOwner.objects.create(name="owner")
+        self.broker = TestBroker.objects.create(owner=self.owner)
+
+    def test_has_user_transitive_permission(self):
+        self.assertFalse(self.user.has_perm("view_testbroker", self.broker))
+        UserObjectPermission.objects.assign_perm(
+            "view_testowner", self.user, self.owner
+        )
+        self.assertTrue(self.user.has_perm("view_testbroker", self.broker))

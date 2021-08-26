@@ -1,2 +1,9 @@
-![example workflow](https://github.com/domandinho/SmartSecurity/actions/workflows/tests.yml/badge.svg)
-Library needs to be updated to work with newest django and django-guardian.
+![Tests](https://github.com/domandinho/SmartSecurity/actions/workflows/tests.yml/badge.svg)
+
+![Black](https://github.com/domandinho/SmartSecurity/actions/workflows/black.yml/badge.svg)
+
+![Flake8](https://github.com/domandinho/SmartSecurity/actions/workflows/linting.yml/badge.svg)
+
+![Coverage](https://github.com/domandinho/SmartSecurity/actions/workflows/coverage.yml/badge.svg)
+
+TODO: finish README.md

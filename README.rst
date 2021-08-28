@@ -1,7 +1,11 @@
-![Tests](https://github.com/domandinho/SmartSecurity/actions/workflows/tests.yml/badge.svg)
-![Black](https://github.com/domandinho/SmartSecurity/actions/workflows/black.yml/badge.svg)
-![Flake8](https://github.com/domandinho/SmartSecurity/actions/workflows/linting.yml/badge.svg)
-![Coverage](https://github.com/domandinho/SmartSecurity/actions/workflows/coverage.yml/badge.svg)
+.. image:: https://github.com/domandinho/SmartSecurity/actions/workflows/tests.yml/badge.svg?branch=master
+  :target: https://github.com/django-guardian/django-guardian/actions/workflows/tests.yml
+.. image:: https://github.com/domandinho/SmartSecurity/actions/workflows/black.yml/badge.svg?branch=master
+  :target: https://github.com/domandinho/SmartSecurity/actions/workflows/black.yml/badge.svg
+.. image:: https://github.com/domandinho/SmartSecurity/actions/workflows/linting.yml/badge.svg?branch=master
+  :target: https://github.com/domandinho/SmartSecurity/actions/workflows/linting.yml/badge.svg
+.. image:: https://github.com/domandinho/SmartSecurity/actions/workflows/coverage.yml/badge.svg?branch=master
+  :target: https://github.com/domandinho/SmartSecurity/actions/workflows/coverage.yml/badge.svg
 
 ``SmartSecurity`` is an extension of django-guardian package, which allows to delegate object's
 permissions checking into foreign object called OwnerObject.
@@ -35,6 +39,6 @@ We need to hook ``django-guardian`` into our project.
         'smart_security.smart_security.SmartSecurityObjectPermissionBackend',
     )
 
-3. Configure ``SMART_SECURITY_MODEL_CLASS`` in django settings.py::
+2. Configure ``SMART_SECURITY_MODEL_CLASS`` in django settings.py::
 
      SMART_SECURITY_MODEL_CLASS = "sample_app.SampleOwner"

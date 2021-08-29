@@ -7,7 +7,8 @@ setup(
         "Extension of django-guardian to allow "
         "delegate permission checking to owner model."
     ),
+    packages=["smart_security"],
+    python_requires=">=3.5",
     author="Piotr Domański",
     author_email="piotrjerzydomanski@gmail.com",
-    packages=["smart_security"],
 )

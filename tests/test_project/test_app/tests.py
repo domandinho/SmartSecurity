@@ -13,6 +13,7 @@ from test_app.models import (
     TestAnotherStartModel,
     TestBroker,
     TestOtherBroker,
+    DummyModel,
 )
 
 
@@ -69,6 +70,7 @@ class ObjectPermissionBackendTests(TestCase):
         self.another_start_model = TestAnotherStartModel.objects.create(
             test=self.start_model
         )
+        self.dummy_model = DummyModel.objects.create(name="foobar")
 
     def _assert_permission_state(self, expected: bool, permission: str, instance):
         assert expected == self.backend.has_perm(self.user, permission, instance)
@@ -141,6 +143,17 @@ class ObjectPermissionBackendTests(TestCase):
             "not_unique_permission", self.user, self.owner
         )
         self._assert_has_perm("not_unique_permission", self.broker)
+
+    def test_no_path_to_owner(self):
+        self._assert_has_no_perm("view_dummymodel", self.dummy_model)
+        UserObjectPermission.objects.assign_perm(
+            "view_testowner", self.user, self.owner
+        )
+        self._assert_has_no_perm("view_dummymodel", self.dummy_model)
+        UserObjectPermission.objects.assign_perm(
+            "view_dummymodel", self.user, self.dummy_model
+        )
+        self._assert_has_perm("view_dummymodel", self.dummy_model)
 
     @override_settings(SMART_SECURITY_MODEL_CLASS=None)
     def test_no_smart_security_object_class(self):

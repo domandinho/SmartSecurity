@@ -36,3 +36,7 @@ class TestStartModel(Model):
 
 class TestAnotherStartModel(Model):
     test = ForeignKey(TestStartModel, on_delete=CASCADE)
+
+
+class DummyModel(Model):
+    name = TextField(primary_key=True)

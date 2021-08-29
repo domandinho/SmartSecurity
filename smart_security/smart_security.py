@@ -69,15 +69,18 @@ class SmartSecurityObjectPermissionBackend(ObjectPermissionBackend):
         cls, model_class: Type[Model], security_model_class: Type[Model]
     ) -> List[str]:
         finder = ModelOwnerPathFinder()
-        shortest = finder.find_shortest_path_to_owner_model(
-            model_to_search_class=model_class,
-            security_model_class=security_model_class,
+        shortest = (
+            finder.find_shortest_path_to_owner_model(
+                model_to_search_class=model_class,
+                security_model_class=security_model_class,
+            )
+            or ""
         )
         if shortest is not None:
-            shortest = shortest.split(".")
+            accessors_sequence = shortest.split(".")
         else:
-            shortest = []
-        return shortest
+            accessors_sequence = []
+        return accessors_sequence
 
     @classmethod
     def _get_permission_name_from_model_name(cls, model_class: Type[Model]) -> str:

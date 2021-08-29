@@ -1,5 +1,5 @@
 from collections import deque
-from typing import Type, Deque, Tuple, Dict
+from typing import Type, Deque, Tuple, Dict, Optional
 
 from django.db.models import Model
 from django.db.models.fields.related import ForeignKey
@@ -17,7 +17,7 @@ class ModelOwnerPathFinder:
         self,
         model_to_search_class: Type[Model],
         security_model_class: Type[Model],
-    ) -> str:
+    ) -> Optional[str]:
         """
         A method to investigate the shortest path to owner's class
         @param model_to_search_class: a model to investigate path
@@ -32,19 +32,20 @@ class ModelOwnerPathFinder:
         return bfs_search.search()
 
 
-class BFSModelSearch:
-    _ANCESTORS_DICT = Dict[Type[Model], Tuple[Type[Model], ForeignKey]]
+ANCESTORS_DICT = Dict[Type[Model], Tuple[Type[Model], ForeignKey]]
 
+
+class BFSModelSearch:
     def __init__(
         self, model_to_search_class: Type[Model], security_model_class: Type[Model]
     ):
         self._model_to_search_class = model_to_search_class
         self._security_model_class = security_model_class
 
-    def search(self) -> str:
-        ancestors = {}
+    def search(self) -> Optional[str]:
+        ancestors: ANCESTORS_DICT = {}
 
-        queue_of_models = deque()
+        queue_of_models: Deque[Type[Model]] = deque()
         queue_of_models.append(self._model_to_search_class)
         while len(queue_of_models):
             # An BFS algorithm to find the shortest path to owner's class.
@@ -52,11 +53,12 @@ class BFSModelSearch:
             if current_class == self._security_model_class:
                 return self._process_ancestors(ancestors)
             self._process_current_class(ancestors, current_class, queue_of_models)
+        return None
 
     @classmethod
     def _process_current_class(
         cls,
-        ancestors: _ANCESTORS_DICT,
+        ancestors: ANCESTORS_DICT,
         current_class: Type[Model],
         queue_of_models: Deque,
     ):
@@ -73,7 +75,7 @@ class BFSModelSearch:
                 ancestors[next_class] = (current_class, field)
                 queue_of_models.append(next_class)
 
-    def _process_ancestors(self, ancestors: _ANCESTORS_DICT) -> str:
+    def _process_ancestors(self, ancestors: ANCESTORS_DICT) -> str:
         # This method creates argument name to access
         # owner's class from model manager of model_to_search_class
         result = ""

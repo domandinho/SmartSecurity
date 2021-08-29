@@ -4,6 +4,8 @@
   :target: https://github.com/domandinho/SmartSecurity/actions/workflows/black.yml/badge.svg
 .. image:: https://github.com/domandinho/SmartSecurity/actions/workflows/linting.yml/badge.svg?branch=master
   :target: https://github.com/domandinho/SmartSecurity/actions/workflows/linting.yml/badge.svg
+.. image:: https://github.com/domandinho/SmartSecurity/actions/workflows/mypy.yml/badge.svg?branch=master
+  :target: https://github.com/domandinho/SmartSecurity/actions/workflows/mypy.yml/badge.svg
 .. image:: https://github.com/domandinho/SmartSecurity/actions/workflows/coverage.yml/badge.svg?branch=master
   :target: https://github.com/domandinho/SmartSecurity/actions/workflows/coverage.yml/badge.svg
 

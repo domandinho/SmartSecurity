@@ -1,4 +1,4 @@
-from django.contrib.auth.models import User
+from django.contrib.auth.models import User, Permission
 from django.test import TestCase, override_settings
 from guardian.models import UserObjectPermission
 
@@ -98,6 +98,17 @@ class ObjectPermissionBackendTests(TestCase):
         )
         self.assertTrue(self.backend.has_perm(self.user, "view_testowner", self.owner))
 
+    def test_has_perm_permission_object(self):
+        self._assert_has_no_perm("view_testowner", self.owner)
+        UserObjectPermission.objects.assign_perm(
+            "view_testowner", self.user, self.owner
+        )
+        self.assertTrue(
+            self.backend.has_perm(
+                self.user, Permission.objects.get(codename="view_testowner"), self.owner
+            )
+        )
+
     def test_has_perm_transitive(self):
         self._assert_has_no_perm("view_testbroker", self.broker)
         UserObjectPermission.objects.assign_perm(
@@ -116,6 +127,20 @@ class ObjectPermissionBackendTests(TestCase):
         )
         self._assert_has_perm("view_teststartmodel", self.start_model)
         self._assert_has_perm("view_testanotherstartmodel", self.another_start_model)
+
+    def test_custom_permission(self):
+        self._assert_has_no_perm("unique_permission", self.broker)
+        UserObjectPermission.objects.assign_perm(
+            "unique_permission", self.user, self.broker
+        )
+        self._assert_has_perm("unique_permission", self.broker)
+
+    def test_custom_permission_not_unique(self):
+        self._assert_has_no_perm("not_unique_permission", self.broker)
+        UserObjectPermission.objects.assign_perm(
+            "not_unique_permission", self.user, self.owner
+        )
+        self._assert_has_perm("not_unique_permission", self.broker)
 
     @override_settings(SMART_SECURITY_MODEL_CLASS=None)
     def test_no_smart_security_object_class(self):

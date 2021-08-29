@@ -5,3 +5,4 @@ __pycache__
 lib/
 build
 .coverage
+.tox

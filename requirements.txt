@@ -1,2 +1,2 @@
 django-guardian==2.0.0
-Django>=2.1
+Django>=3.1

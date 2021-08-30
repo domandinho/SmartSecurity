@@ -73,7 +73,10 @@ class SmartSecurityObjectPermissionBackend(ObjectPermissionBackend):
             model_to_search_class=model_class,
             security_model_class=security_model_class,
         )
-        shortest = shortest.split(".")
+        if shortest is not None:
+            shortest = shortest.split(".")
+        else:
+            shortest = []
         return shortest
 
     @classmethod

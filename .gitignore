@@ -6,3 +6,4 @@ lib/
 build
 .coverage
 .tox
+.mypy_cache

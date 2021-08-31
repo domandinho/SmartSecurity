@@ -74,10 +74,10 @@ class SmartSecurityObjectPermissionBackend(ObjectPermissionBackend):
             security_model_class=security_model_class,
         )
         if shortest is not None:
-            shortest = shortest.split(".")
+            accessors_sequence = shortest.split(".")
         else:
-            shortest = []
-        return shortest
+            accessors_sequence = []
+        return accessors_sequence
 
     @classmethod
     def _get_permission_name_from_model_name(cls, model_class: Type[Model]) -> str:

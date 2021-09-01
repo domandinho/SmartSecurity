@@ -22,7 +22,7 @@ Under the hood SmartSecurity is loading model graphs and looking for the shortes
 
 Requirements
 ------------
-* Python 3.8+
+* Python 3.6+
 * django-guardian >= 2.0
 
 Configuration

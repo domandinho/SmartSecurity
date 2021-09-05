@@ -33,10 +33,16 @@ class SmartSecurityObjectPermissionBackend(ObjectPermissionBackend):
         security_model_class = self._get_security_model_class()
         model_class = obj.__class__
         if security_model_class != model_class:
-            owner = self._get_owner(model_class, obj, security_model_class)
+            owner = self._get_owner(
+                model_class=model_class,
+                security_model_class=security_model_class,
+                obj=obj,
+            )
             owner_perm = perm.replace(
-                self._get_permission_name_from_model_name(model_class),
-                self._get_permission_name_from_model_name(security_model_class),
+                self._get_permission_name_from_model_class(model_class=model_class),
+                self._get_permission_name_from_model_class(
+                    model_class=security_model_class
+                ),
             )
             if self._should_apply_smart_security(owner, owner_perm):
                 obj = owner
@@ -46,7 +52,9 @@ class SmartSecurityObjectPermissionBackend(ObjectPermissionBackend):
     def _get_owner(
         self, model_class: Type[Model], obj: Model, security_model_class: Type[Model]
     ) -> Model:
-        shortest = self._find_shortest_accessor(model_class, security_model_class)
+        shortest = self._find_shortest_accessor(
+            model_class=model_class, security_model_class=security_model_class
+        )
         for accessor in shortest:
             obj = getattr(obj, accessor)
         return obj
@@ -59,7 +67,7 @@ class SmartSecurityObjectPermissionBackend(ObjectPermissionBackend):
 
     @classmethod
     def _should_apply_smart_security(cls, owner: Model, owner_perm: str) -> bool:
-        content_type = get_content_type(owner)
+        content_type = get_content_type(obj=owner)
         return Permission.objects.filter(
             codename=owner_perm, content_type=content_type
         ).exists()
@@ -80,20 +88,17 @@ class SmartSecurityObjectPermissionBackend(ObjectPermissionBackend):
         return accessors_sequence
 
     @classmethod
-    def _get_permission_name_from_model_name(cls, model_class: Type[Model]) -> str:
+    def _get_permission_name_from_model_class(cls, model_class: Type[Model]) -> str:
         return model_class.__name__.lower()
 
     @classmethod
     def _get_security_model_class(cls) -> Type[Model]:
-        smart_security_model_class_name = getattr(
-            settings,
-            SMART_SECURITY_MODEL_CLASS_SETTING,
-            None,
-        )
-        if smart_security_model_class_name is None:
-            raise SmartSecurityIncorrectConfigException(
-                "SMART_SECURITY_MODEL_CLASS setting must be different then None!"
-            )
+        smart_security_model_class_name = cls._get_smart_security_model_class_name()
+        security_model_class = cls._get_model_class(smart_security_model_class_name)
+        return security_model_class
+
+    @classmethod
+    def _get_model_class(cls, smart_security_model_class_name: str) -> Type[Model]:
         try:
             app_label, model_name = smart_security_model_class_name.rsplit(
                 ".", maxsplit=1
@@ -112,3 +117,16 @@ class SmartSecurityObjectPermissionBackend(ObjectPermissionBackend):
                 f"SMART_SECURITY_MODEL_CLASS setting is wrong: {e}"
             )
         return security_model_class
+
+    @classmethod
+    def _get_smart_security_model_class_name(cls) -> str:
+        smart_security_model_class_name = getattr(
+            settings,
+            SMART_SECURITY_MODEL_CLASS_SETTING,
+            None,
+        )
+        if smart_security_model_class_name is None:
+            raise SmartSecurityIncorrectConfigException(
+                "SMART_SECURITY_MODEL_CLASS setting must be different then None!"
+            )
+        return smart_security_model_class_name

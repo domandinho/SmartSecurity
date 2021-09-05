@@ -15,6 +15,7 @@ When object is connected in database to owner object by sequence of relationship
 than permissions checking can be delegated into the owner object.
 This allows to optimize memory usage of database as instead of granting every user access to every
 entity within some namespace, we can just grant it into the owner object.
+It also helps to avoid writing boilerplate code for permissions delegation.
 
 Implementation
 --------------

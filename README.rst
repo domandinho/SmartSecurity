@@ -30,7 +30,7 @@ Requirements
 Configuration
 -------------
 
-We need to hook ``django-guardian`` into our project.
+You need to have ``django-guardian`` setup in your project.
 
 
 1. Add extra authorization backend ``SmartSecurityObjectPermissionBackend`` to your ``settings.py``:
